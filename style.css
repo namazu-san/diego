@@ -19,7 +19,7 @@ body {
 
 /* Header */
 .header {
-    background: rgba(0, 31, 63, 0.95);
+    background: rgba(34, 124, 217, 0.39);
     backdrop-filter: blur(10px);
     padding: 20px 0;
     position: sticky;
@@ -50,7 +50,7 @@ body {
     color: #cdd563;
     text-decoration: none;
     transition: color 0.3s ease;
-    font-weight: 500;
+    font-weight: 950;
 }
 
 .nav-links a:hover {
@@ -454,7 +454,7 @@ body {
     height: 500%;
     width: auto;
     object-fit: contain;
-    margin-top: -2em;
+    margin-top: -2.3em;
 }
 
 /* Responsive */
@@ -469,6 +469,12 @@ body {
     
     .filter-buttons {
         gap: 10px;
+    }
+    .logo img {
+        height: 400%;
+        width: auto;
+        object-fit: contain;
+        margin-top: -1.7em;
     }
     
     .cars-grid {
