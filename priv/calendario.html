@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario Flotta - Gestione Noleggio</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="calendario.css" />
+</head>
+<nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1>Sistema Flotta</h1>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="flotta.html" class="nav-link ">
+                        <span class="nav-icon">🚗</span>
+                        Gestione Flotta
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="richieste.html" class="nav-link">
+                        <span class="nav-icon">📋</span>
+                        Richieste
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="calendario.html" class="nav-link active">
+                        <span class="nav-icon">📅</span>
+                        Calendario
+                    </a>
+                </li>
+            </ul>
+            <div class="nav-toggle" id="navToggle">
+                <span class="nav-toggle-bar"></span>
+                <span class="nav-toggle-bar"></span>
+                <span class="nav-toggle-bar"></span>
+            </div>
+        </div>
+    </nav>
+    <body>
+    <header class="header">
+        <h1>📅 Calendario Gestione Flotta</h1>
+        <div id="currentDateTime" class="current-time"></div>
+    </header>
+    
+
+    <div class="container">
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <h3>Prenotazioni Totali</h3>
+                <div class="stat-value" id="totalBookings">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Auto Disponibili Ora</h3>
+                <div class="stat-value" id="availableCars">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Auto Occupate Ora</h3>
+                <div class="stat-value" id="occupiedCars">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Ricavi Giorno Corrente</h3>
+                <div class="stat-value" id="todayRevenue">-</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label class="control-label">Filtra per Data</label>
+                <input type="date" class="control-input" id="filterDate">
+            </div>
+            <div class="control-group">
+                <label class="control-label">Filtro per Brand</label>
+                <select class="control-input" id="brandSelect">
+                    <option value="">Tutti i brand</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label class="control-label">Auto Specifica</label>
+                <select class="control-input" id="carSelect">
+                    <option value="">Tutte le auto</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="calendar-section">
+                <div class="section-title">
+                    📅 Calendario Prenotazioni
+                </div>
+                <div class="month-navigation">
+                    <button class="nav-btn" onclick="previousMonth()">‹</button>
+                    <div class="month-title" id="monthTitle"></div>
+                    <button class="nav-btn" onclick="nextMonth()">›</button>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(45deg, #ff6b6b, #ee5a52);"></div>
+                        <span>Prenotazione Attiva</span>
+                    </div>
+                </div>
+                <div class="calendar-grid" id="calendar">
+                    <div class="loading">Caricamento calendario...</div>
+                </div>
+            </div>
+
+            <div class="availability-section">
+                <div class="section-title">
+                    🚗 Stato Flotta
+                </div>
+                <div class="availability-list" id="availabilityList">
+                    <div class="loading">Caricamento stato flotta...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-section">
+            <div class="chart-container">
+                <div class="chart-title">Utilizzo Flotta</div>
+                <canvas id="utilizzoChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Ricavi per Auto</div>
+                <canvas id="ricaviChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let calendarioData = null;
+        let flottaData = null;
+        let currentDate = new Date();
+        let utilizzoChart = null;
+        let ricaviChart = null;
+        let selectedFilterDate = null;
+        let romaDateTime = null;
+
+        // Funzione per ottenere data e ora di Roma
+        function getRomaDateTime() {
+            const now = new Date();
+            const romaTime = new Date(now.toLocaleString("en-US", {timeZone: "Europe/Rome"}));
+            return romaTime;
+        }
+
+        // Funzione per ottenere solo la data di Roma in formato YYYY-MM-DD
+        function getRomaDateString() {
+            const romaTime = getRomaDateTime();
+            return romaTime.toISOString().split('T')[0];
+        }
+
+        // Aggiorna il display dell'ora corrente
+        function updateCurrentTime() {
+            romaDateTime = getRomaDateTime();
+            document.getElementById('currentDateTime').textContent = 
+                `Roma: ${romaDateTime.toLocaleDateString('it-IT')} - ${romaDateTime.toLocaleTimeString('it-IT')}`;
+        }
+
+        // Caricamento dati dai file JSON
+        async function loadData() {
+            try {
+                const [calendarioRes, flottaRes] = await Promise.all([
+                    fetch('calendario.json'),
+                    fetch('flotta.json')
+                ]);
+
+                if (!calendarioRes.ok || !flottaRes.ok) {
+                    throw new Error('Errore nel caricamento dei file JSON');
+                }
+
+                calendarioData = await calendarioRes.json();
+                flottaData = await flottaRes.json();
+
+                initializeApp();
+            } catch (error) {
+                console.error('Errore nel caricamento dei dati:', error);
+                document.body.innerHTML = '<div style="color: red; text-align: center; padding: 50px;">Errore nel caricamento dei file JSON. Verificare che calendario.json e flotta.json siano presenti.</div>';
+            }
+        }
+
+        function initializeApp() {
+            updateCurrentTime();
+            // Aggiorna l'ora ogni minuto
+            setInterval(updateCurrentTime, 60000);
+            
+            populateCarSelect();
+            updateStats();
+            renderCalendar();
+            updateAvailabilityList();
+            createCharts();
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('filterDate').addEventListener('change', function() {
+                selectedFilterDate = this.value;
+                
+                // Naviga automaticamente al mese della data selezionata
+                if (selectedFilterDate) {
+                    const filterDate = new Date(selectedFilterDate);
+                    currentDate = new Date(filterDate.getFullYear(), filterDate.getMonth(), 1);
+                }
+                
+                renderCalendar();
+                updateAvailabilityList();
+                updateStats();
+            });
+
+            document.getElementById('brandSelect').addEventListener('change', function() {
+                populateCarsByBrand(this.value);
+                updateAvailabilityList();
+                updateStats();
+                createCharts();
+            });
+
+            document.getElementById('carSelect').addEventListener('change', function() {
+                updateAvailabilityList();
+                updateStats();
+                createCharts();
+            });
+        }
+
+        function populateCarSelect() {
+            const brandSelect = document.getElementById('brandSelect');
+            const carSelect = document.getElementById('carSelect');
+            
+            if (flottaData && flottaData.cars) {
+                // Popola i brand unici
+                const uniqueBrands = [...new Set(flottaData.cars.map(car => car.brand))];
+                uniqueBrands.forEach(brand => {
+                    const option = document.createElement('option');
+                    option.value = brand;
+                    option.textContent = brand;
+                    brandSelect.appendChild(option);
+                });
+
+                // Popola tutte le auto inizialmente
+                populateCarsByBrand('');
+            }
+        }
+
+        function populateCarsByBrand(selectedBrand) {
+            const carSelect = document.getElementById('carSelect');
+            
+            // Pulisci le opzioni esistenti
+            carSelect.innerHTML = '<option value="">Tutte le auto</option>';
+            
+            if (flottaData && flottaData.cars) {
+                const filteredCars = selectedBrand ? 
+                    flottaData.cars.filter(car => car.brand === selectedBrand) : 
+                    flottaData.cars;
+                
+                filteredCars.forEach(car => {
+                    const option = document.createElement('option');
+                    option.value = car.title;
+                    option.textContent = car.title;
+                    carSelect.appendChild(option);
+                });
+            }
+        }
+
+        function isBookingActiveAtDateTime(booking, checkDateTime) {
+            const startDateTime = new Date(booking.startDate);
+            const endDateTime = new Date(booking.endDate);
+            
+            // Considera attiva una prenotazione se il momento attuale è compreso tra inizio e fine
+            return checkDateTime >= startDateTime && checkDateTime <= endDateTime && booking.status === 'confirmed';
+        }
+
+        function updateStats() {
+            if (!calendarioData || !flottaData) return;
+
+            const totalBookings = calendarioData.totalBookings || 0;
+            const totalCars = flottaData.cars ? flottaData.cars.length : 0;
+            
+            // Usa data/ora di Roma attuale o data filtro (se selezionata)
+            const referenceDateTime = selectedFilterDate ? 
+                new Date(selectedFilterDate + 'T12:00:00') : // Mezzogiorno della data selezionata
+                getRomaDateTime(); // Ora corrente di Roma
+
+            const selectedBrand = document.getElementById('brandSelect').value;
+            const selectedCar = document.getElementById('carSelect').value;
+
+            // Filtra le prenotazioni attive
+            let activeBookings = calendarioData.bookings ? 
+                calendarioData.bookings.filter(booking => isBookingActiveAtDateTime(booking, referenceDateTime)) : [];
+
+            // Applica filtri brand/auto
+            if (selectedBrand || selectedCar) {
+                activeBookings = activeBookings.filter(booking => {
+                    const carInfo = flottaData.cars.find(car => car.title === booking.car);
+                    if (!carInfo) return false;
+                    
+                    if (selectedBrand && carInfo.brand !== selectedBrand) return false;
+                    if (selectedCar && booking.car !== selectedCar) return false;
+                    
+                    return true;
+                });
+            }
+
+            const occupiedToday = activeBookings.length;
+            const availableToday = (selectedBrand || selectedCar) ? 
+                getFilteredCarsCount() - occupiedToday : 
+                totalCars - occupiedToday;
+
+            // CALCOLO RICAVI CORRETTO - Il prezzo è già giornaliero, non dividerlo
+            const todayRevenue = activeBookings.reduce((sum, booking) => {
+                return sum + (booking.price || 0);
+            }, 0);
+
+            document.getElementById('totalBookings').textContent = totalBookings;
+            document.getElementById('availableCars').textContent = availableToday;
+            document.getElementById('occupiedCars').textContent = occupiedToday;
+            document.getElementById('todayRevenue').textContent = `€${Math.round(todayRevenue)}`;
+        }
+
+        function getFilteredCarsCount() {
+            const selectedBrand = document.getElementById('brandSelect').value;
+            const selectedCar = document.getElementById('carSelect').value;
+            
+            let carsToCount = flottaData.cars;
+            
+            if (selectedBrand) {
+                carsToCount = carsToCount.filter(car => car.brand === selectedBrand);
+            }
+            
+            if (selectedCar) {
+                carsToCount = carsToCount.filter(car => car.title === selectedCar);
+            }
+            
+            return carsToCount.length;
+        }
+
+        function renderCalendar() {
+            const calendar = document.getElementById('calendar');
+            const monthTitle = document.getElementById('monthTitle');
+            
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            monthTitle.textContent = `${getMonthName(month)} ${year}`;
+            
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay());
+            
+            const calendarHtml = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab']
+                .map(day => `<div class="calendar-header">${day}</div>`)
+                .join('');
+            
+            let daysHtml = '';
+            const currentCalendarDate = new Date(startDate);
+            const todayRomaDate = getRomaDateString();
+            
+            for (let i = 0; i < 42; i++) {
+                const dayNumber = currentCalendarDate.getDate();
+                const isCurrentMonth = currentCalendarDate.getMonth() === month;
+                const dateStr = currentCalendarDate.toISOString().split('T')[0];
+                
+                // Filtra le prenotazioni per il giorno (considera tutto il giorno, non l'ora)
+                let bookingsForDay = calendarioData.bookings ? 
+                    calendarioData.bookings.filter(booking => {
+                        const start = new Date(booking.startDate);
+                        const end = new Date(booking.endDate);
+                        const checkDate = new Date(dateStr);
+                        return checkDate >= start && checkDate <= end && booking.status === 'confirmed';
+                    }) : [];
+
+                // Applica filtri se selezionati
+                const selectedBrand = document.getElementById('brandSelect').value;
+                const selectedCar = document.getElementById('carSelect').value;
+
+                if (selectedBrand || selectedCar) {
+                    bookingsForDay = bookingsForDay.filter(booking => {
+                        const carInfo = flottaData.cars.find(car => car.title === booking.car);
+                        if (!carInfo) return false;
+                        
+                        if (selectedBrand && carInfo.brand !== selectedBrand) return false;
+                        if (selectedCar && booking.car !== selectedCar) return false;
+                        
+                        return true;
+                    });
+                }
+
+                // Evidenzia il giorno corrente e la data filtro
+                const isToday = dateStr === todayRomaDate;
+                const isFilteredDate = selectedFilterDate && dateStr === selectedFilterDate;
+                let dayClass = 'calendar-day';
+                
+                if (bookingsForDay.length > 0) {
+                    dayClass += ' has-booking';
+                }
+                
+                if (isToday) {
+                    dayClass += ' today';
+                }
+                
+                if (isFilteredDate) {
+                    dayClass += ' filtered-date';
+                }
+                
+                const bookingIndicators = bookingsForDay
+                    .slice(0, 12) 
+                    .map(booking => {
+                        const carInfo = flottaData.cars.find(car => car.title === booking.car);
+                        const displayName = carInfo ? `${carInfo.brand} ${booking.car}` : booking.car;
+                        return `<span class="booking-indicator">${displayName}</span>`; 
+                    })
+                    .join('');
+                
+                daysHtml += `
+                    <div class="${dayClass}" style="opacity: ${isCurrentMonth ? 1 : 0.5}">
+                        <div class="day-number">${dayNumber}</div>
+                        ${bookingIndicators}
+                    </div>
+                `;
+                
+                currentCalendarDate.setDate(currentCalendarDate.getDate() + 1);
+            }
+            
+            calendar.innerHTML = calendarHtml + daysHtml;
+        }
+        
+
+        function updateAvailabilityList() {
+            const list = document.getElementById('availabilityList');
+            if (!flottaData || !flottaData.cars) return;
+
+            const referenceDateTime = selectedFilterDate ? 
+                new Date(selectedFilterDate + 'T12:00:00') : 
+                getRomaDateTime();
+                
+            const selectedBrand = document.getElementById('brandSelect').value;
+            const selectedCar = document.getElementById('carSelect').value;
+            
+            // Filtra le auto in base ai criteri selezionati
+            let carsToShow = flottaData.cars;
+            
+            if (selectedBrand) {
+                carsToShow = carsToShow.filter(car => car.brand === selectedBrand);
+            }
+            
+            if (selectedCar) {
+                carsToShow = carsToShow.filter(car => car.title === selectedCar);
+            }
+            
+            const availabilityHtml = carsToShow.map(car => {
+                const activeBooking = calendarioData.bookings ? 
+                    calendarioData.bookings.find(booking => {
+                        return booking.car === car.title && 
+                               isBookingActiveAtDateTime(booking, referenceDateTime);
+                    }) : null;
+
+                const isAvailable = !activeBooking;
+                
+                return `
+                    <div class="car-availability">
+                        <div class="car-name">${car.brand} ${car.title}</div>
+                        <div class="car-details" style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 0.5rem;">
+                            ${car.price || 'Prezzo da definire'} • ${car.year || 'N/A'} • ${car.fuel || 'N/A'}
+                        </div>
+                        <div class="availability-status">
+                            <div class="status-dot ${isAvailable ? 'available' : 'occupied'}"></div>
+                            <span class="status-text">${isAvailable ? 'Disponibile' : 'Occupata'}</span>
+                        </div>
+                        ${!isAvailable ? `
+                            <div class="booking-details">
+                                Cliente: ${activeBooking.clientName}<br>
+                                Dal: ${formatDate(activeBooking.startDate)} al: ${formatDate(activeBooking.endDate)}<br>
+                                Telefono: ${activeBooking.clientPhone || 'N/D'}<br>
+                                Email: ${activeBooking.clientEmail || 'N/D'}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            list.innerHTML = availabilityHtml;
+        }
+
+        function createCharts() {
+            createUtilizzoChart();
+            createRicaviChart();
+        }
+
+        function createUtilizzoChart() {
+            const ctx = document.getElementById('utilizzoChart').getContext('2d');
+            
+            if (utilizzoChart) {
+                utilizzoChart.destroy();
+            }
+
+            const occupiedCars = parseInt(document.getElementById('occupiedCars').textContent) || 0;
+            const availableCars = parseInt(document.getElementById('availableCars').textContent) || 0;
+
+            utilizzoChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Disponibili', 'Occupate'],
+                    datasets: [{
+                        data: [availableCars, occupiedCars],
+                        backgroundColor: [
+                            'rgba(76, 175, 80, 0.8)',
+                            'rgba(244, 67, 54, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(76, 175, 80, 1)',
+                            'rgba(244, 67, 54, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'white'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createRicaviChart() {
+            const ctx = document.getElementById('ricaviChart').getContext('2d');
+            
+            if (ricaviChart) {
+                ricaviChart.destroy();
+            }
+
+            // Filtra i ricavi in base ai filtri selezionati
+            const selectedBrand = document.getElementById('brandSelect').value;
+            const selectedCar = document.getElementById('carSelect').value;
+
+            const carRevenue = {};
+            if (calendarioData.bookings) {
+                calendarioData.bookings.forEach(booking => {
+                    if (booking.status === 'confirmed') {
+                        // Applica filtri
+                        const carInfo = flottaData.cars.find(car => car.title === booking.car);
+                        if (!carInfo) return;
+                        
+                        if (selectedBrand && carInfo.brand !== selectedBrand) return;
+                        if (selectedCar && booking.car !== selectedCar) return;
+                        
+                        // Per il grafico ricavi totali per auto, calcola i giorni di noleggio
+                        const start = new Date(booking.startDate);
+                        const end = new Date(booking.endDate);
+                        const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                        const totalRevenue = (booking.price || 0) * totalDays;
+                        
+                        carRevenue[booking.car] = (carRevenue[booking.car] || 0) + totalRevenue;
+                    }
+                });
+            }
+
+            const labels = Object.keys(carRevenue);
+            const data = Object.values(carRevenue);
+
+            ricaviChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Ricavi Totali (€)',
+                        data: data,
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'white'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: 'white'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: 'white'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function previousMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        }
+
+        function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        }
+
+        function getMonthName(month) {
+            const months = [
+                'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+            ];
+            return months[month];
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('it-IT');
+        }
+
+        // Inizializza l'applicazione
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+
+    <style>
+        .current-time {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+        
+        .today {
+            background-color: rgba(76, 175, 80, 0.2) !important;
+            border: 2px solid #4caf50 !important;
+        }
+        
+        .filtered-date {
+            background-color: rgba(255, 193, 7, 0.3) !important;
+            border: 2px solid #ffc107 !important;
+        }
+        
+        .has-booking {
+            background-color: rgba(244, 67, 54, 0.1) !important;
+            border-color: rgba(244, 67, 54, 0.5) !important;
+        }
+        
+        .has-booking .booking-indicator {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            margin-top: 2px;
+            display: block;
+            text-align: center;
+        }
+
+        .main-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            height: 70px;
+        }
+
+        .nav-brand h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-item {
+            position: relative;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            text-decoration: none;
+            color: rgba(255, 255, 255, 0.8);
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .nav-link:hover {
+            color: #00d4ff;
+            background: rgba(0, 212, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .nav-link.active {
+            color: #ffffff;
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .nav-icon {
+            font-size: 1.1rem;
+        }
+
+        .nav-toggle {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            gap: 4px;
+        }
+
+        .nav-toggle-bar {
+            width: 25px;
+            height: 3px;
+            background: #ffffff;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+    </style>
+</body>
+</html>

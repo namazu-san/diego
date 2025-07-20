@@ -1,0 +1,67 @@
+{
+    "requests": [
+        {
+            "id": 1,
+            "name": "Mario Rossi",
+            "email": "mario.rossi@email.com",
+            "phone": "+39 123 456 7890",
+            "car": "BMW Serie 3",
+            "message": "Vorrei noleggiare una BMW Serie 3 per un viaggio di lavoro di 5 giorni. Preferibilmente con navigatore GPS e assicurazione completa.",
+            "status": "approved",
+            "date": "2025-01-20",
+            "updated_at": "2025-07-20T18:33:47+02:00",
+            "approved_date": "2025-07-20"
+        },
+        {
+            "id": 2,
+            "name": "Laura Bianchi",
+            "email": "laura.bianchi@gmail.com",
+            "phone": "+39 987 654 3210",
+            "car": "Audi A4",
+            "message": "Cerco un'auto elegante per un matrimonio il prossimo weekend. L'Audi A4 sarebbe perfetta.",
+            "status": "approved",
+            "date": "2025-01-19"
+        },
+        {
+            "id": 3,
+            "name": "Giuseppe Verde",
+            "email": "g.verde@company.it",
+            "phone": "+39 555 123 456",
+            "car": "Mercedes Classe C",
+            "message": "Noleggio per meeting aziendali. Necessito di un'auto di rappresentanza per tutta la settimana.",
+            "status": "pending",
+            "date": "2025-01-18"
+        },
+        {
+            "id": 4,
+            "name": "Anna Neri",
+            "email": "anna.neri@outlook.com",
+            "phone": "",
+            "car": "Ford Focus",
+            "message": "Auto per uso quotidiano per 2 settimane mentre la mia è in riparazione.",
+            "status": "rejected",
+            "date": "2025-01-17"
+        },
+        {
+            "id": 5,
+            "name": "Francesco Blu",
+            "email": "f.blu@email.it",
+            "phone": "+39 333 789 012",
+            "car": "Volkswagen Golf",
+            "message": "Necessito di un'auto per le vacanze estive. Durata prevista: 10 giorni.",
+            "status": "pending",
+            "date": "2025-01-16"
+        },
+        {
+            "id": 6,
+            "name": "Giulia Rosa",
+            "email": "giulia.rosa@company.com",
+            "phone": "+39 444 567 890",
+            "car": "Toyota Corolla",
+            "message": "Auto per trasferte di lavoro. Km elevati previsti.",
+            "status": "approved",
+            "date": "2025-01-15"
+        }
+    ],
+    "lastUpdated": "2025-07-20T18:33:47+02:00"
+}

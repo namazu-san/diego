@@ -1,0 +1,114 @@
+{
+    "cars": [
+        {
+            "id": 1,
+            "brand": "BMW",
+            "title": "BMW Serie 7",
+            "price": "€150\/giorno",
+            "image": "images\/bmw-serie-7.jpg",
+            "features": [
+                "Automatico",
+                "Luxury",
+                "GPS"
+            ],
+            "engine": "3.0L TwinPower Turbo",
+            "power": "340 CV",
+            "fuel": "Benzina",
+            "seats": "5 posti",
+            "transmission": "Automatico 8 rapporti",
+            "year": "2024",
+            "description": "La BMW Serie 7 rappresenta l'eccellenza nel segmento delle berline di lusso. Dotata di tecnologie all'avanguardia, interni raffinati e prestazioni eccezionali, garantisce un'esperienza di guida superiore."
+        },
+        {
+            "id": 2,
+            "brand": "MERCEDES",
+            "title": "Mercedes Classe S",
+            "price": "€180\/giorno",
+            "image": "images\/mercedes-classe-s.jpg",
+            "features": [
+                "Automatico",
+                "Executive",
+                "Massaggi"
+            ],
+            "engine": "4.0L V8 BiTurbo",
+            "power": "469 CV",
+            "fuel": "Benzina",
+            "seats": "5 posti",
+            "transmission": "Automatico 9 rapporti",
+            "year": "2024",
+            "description": "La Mercedes Classe S definisce gli standard del lusso automobilistico. Con sedili massaggianti, climatizzazione a 4 zone e tecnologia di assistenza alla guida più avanzata al mondo."
+        },
+        {
+            "id": 3,
+            "brand": "AUDI",
+            "title": "Audi A8",
+            "price": "€140\/giorno",
+            "image": "images\/audi-a8.jpg",
+            "features": [
+                "Quattro",
+                "Matrix LED",
+                "Bang & Olufsen"
+            ],
+            "engine": "3.0L TFSI",
+            "power": "340 CV",
+            "fuel": "Benzina",
+            "seats": "5 posti",
+            "transmission": "Automatico tiptronic",
+            "year": "2024",
+            "description": "L'Audi A8 combina eleganza, tecnologia e prestazioni. Dotata di trazione integrale quattro e sistema audio Bang & Olufsen per un'esperienza sensoriale completa."
+        },
+        {
+            "id": 4,
+            "brand": "PORSCHE",
+            "title": "Porsche Panamera",
+            "price": "€220\/giorno",
+            "image": "images\/porsche-panamera.jpg",
+            "features": [
+                "Sport",
+                "Adaptive",
+                "Bose"
+            ],
+            "engine": "4.0L V8 Twin-Turbo",
+            "power": "460 CV",
+            "fuel": "Benzina",
+            "seats": "4 posti",
+            "transmission": "PDK 8 rapporti",
+            "year": "2024",
+            "description": "La Porsche Panamera unisce l'anima sportiva di una vera Porsche al comfort di una berlina di lusso. Prestazioni da supercar con il comfort quotidiano."
+        },
+        {
+            "id": 5,
+            "brand": "FERRARI",
+            "title": "Ferrari Roma",
+            "price": "€800\/giorno",
+            "image": "images\/ferrari-roma.jpg",
+            "features": [
+                "V8",
+                "Carbonio",
+                "Exclusivo"
+            ],
+            "engine": "3.9L V8 Twin-Turbo",
+            "power": "620 CV",
+            "fuel": "Benzina",
+            "seats": "2+2 posti",
+            "transmission": "Automatico 8 rapporti",
+            "year": "2024",
+            "description": "La Ferrari Roma incarna l'eleganza italiana e le prestazioni leggendarie del Cavallino Rampante. Un'esperienza di guida unica ed emozionante."
+        },
+        {
+          "id": 6,
+          "brand": "BMW",
+          "title": "BMW Serie 3",
+          "price": "€160/giorno",
+          "image": "images/bmw-x7.jpg",
+          "features": ["7 posti", "xDrive", "Panoramico"],
+          "engine": "3.0L TwinPower Turbo",
+          "power": "340 CV",
+          "fuel": "Benzina",
+          "seats": "7 posti",
+          "transmission": "Automatico 8 rapporti",
+          "year": "2024",
+          "description": "Il BMW Serie 3 è il SUV di lusso perfetto per famiglie esigenti. Spazio, comfort e tecnologia BMW in un pacchetto imponente e raffinato."
+        }
+    ]
+}

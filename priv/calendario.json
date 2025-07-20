@@ -1,0 +1,22 @@
+{
+    "lastUpdated": "2025-07-20T18:33:47+02:00",
+    "totalBookings": 1,
+    "bookings": [
+        {
+            "id": 1,
+            "requestId": 1,
+            "clientName": "Mario Rossi",
+            "clientEmail": "mario.rossi@email.com",
+            "clientPhone": "+39 123 456 7890",
+            "car": "BMW Serie 3",
+            "startDate": "2025-01-01",
+            "endDate": "2026-01-01",
+            "price": 100,
+            "notes": "nessuna nota veramente",
+            "status": "confirmed",
+            "approvedDate": "2025-07-20",
+            "createdAt": "2025-07-20T18:33:47+02:00",
+            "originalMessage": "Vorrei noleggiare una BMW Serie 3 per un viaggio di lavoro di 5 giorni. Preferibilmente con navigatore GPS e assicurazione completa."
+        }
+    ]
+}

@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Richieste - Sistema Flotta</title>
+    <link rel="stylesheet" href="richieste.css" />
+</head>
+<body>
+    <!-- Header di navigazione -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1>Sistema Flotta</h1>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="flotta.html" class="nav-link">
+                        <span class="nav-icon">🚗</span>
+                        Gestione Flotta
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="richieste.html" class="nav-link active">
+                        <span class="nav-icon">📋</span>
+                        Richieste
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="calendario.html" class="nav-link">
+                        <span class="nav-icon">📅</span>
+                        Calendario
+                    </a>
+                </li>
+            </ul>
+            <div class="nav-toggle" id="navToggle">
+                <span class="nav-toggle-bar"></span>
+                <span class="nav-toggle-bar"></span>
+                <span class="nav-toggle-bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Messaggio di successo -->
+        <div id="successMessage" class="success-message">
+            <strong>Richiesta approvata con successo!</strong><br>
+            I dati sono stati salvati nel calendario.
+        </div>
+
+        <!-- Messaggio di errore -->
+        <div id="errorMessage" class="error-message">
+            <strong>Errore!</strong><br>
+            <span id="errorText"></span>
+        </div>
+
+        <div class="header">
+            <h1>Gestione Richieste</h1>
+            <p>Gestisci tutte le richieste di noleggio dei clienti</p>
+        </div>
+
+        <!-- Statistiche -->
+        <div class="stats-bar">
+            <div class="stat-card stat-total">
+                <div class="stat-number" id="totalRequests">0</div>
+                <div class="stat-label">Totale Richieste</div>
+            </div>
+            <div class="stat-card stat-pending">
+                <div class="stat-number" id="pendingRequests">0</div>
+                <div class="stat-label">In Attesa</div>
+            </div>
+            <div class="stat-card stat-approved">
+                <div class="stat-number" id="approvedRequests">0</div>
+                <div class="stat-label">Approvate</div>
+            </div>
+            <div class="stat-card stat-rejected">
+                <div class="stat-number" id="rejectedRequests">0</div>
+                <div class="stat-label">Rifiutate</div>
+            </div>
+        </div>
+
+        <!-- Controlli -->
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Cerca per nome, email, auto...">
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">Tutte</button>
+                <button class="filter-btn" data-filter="pending">In Attesa</button>
+                <button class="filter-btn" data-filter="approved">Approvate</button>
+                <button class="filter-btn" data-filter="rejected">Rifiutate</button>
+            </div>
+        </div>
+
+        <!-- Griglia richieste -->
+        <div id="requestsGrid" class="requests-grid">
+            <div class="loading">
+                <h3>Caricamento richieste...</h3>
+                <p>Attendere il caricamento dei dati</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal per approvazione -->
+    <div class="modal-overlay" id="approvalModal">
+        <div class="approval-modal">
+            <div class="modal-header">
+                <h2>Approva Richiesta</h2>
+                <p>Inserisci i dettagli per l'approvazione</p>
+            </div>
+            <form class="modal-form" id="approvalForm">
+                <div class="form-group">
+                    <label for="startDate">Data Inizio Noleggio</label>
+                    <input type="date" id="startDate" name="startDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="endDate">Data Fine Noleggio</label>
+                    <input type="date" id="endDate" name="endDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="price">Prezzo Totale (€)</label>
+                    <input type="number" id="price" name="price" min="0" step="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label for="notes">Note Aggiuntive (opzionale)</label>
+                    <input type="text" id="notes" name="notes" placeholder="Eventuali note per il cliente...">
+                </div>
+            </form>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-confirm" id="confirmApproval">
+                    <span id="confirmButtonText">Conferma Approvazione</span>
+                    <span id="confirmButtonLoader" class="button-loader" style="display: none;">⏳</span>
+                </button>
+                <button type="button" class="btn-modal btn-cancel" id="cancelApproval">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variabili globali
+        let requestsData = [];
+        let filteredRequests = [];
+        let currentFilter = 'all';
+        let isDataLoaded = false;
+        let currentRequestForApproval = null;
+
+        // Funzione per mostrare messaggi
+        function showMessage(type, message) {
+            const successMsg = document.getElementById('successMessage');
+            const errorMsg = document.getElementById('errorMessage');
+            
+            // Nascondi tutti i messaggi
+            successMsg.classList.remove('show');
+            errorMsg.classList.remove('show');
+            
+            if (type === 'success') {
+                successMsg.querySelector('strong').nextSibling.textContent = message;
+                successMsg.classList.add('show');
+                setTimeout(() => successMsg.classList.remove('show'), 4000);
+            } else if (type === 'error') {
+                document.getElementById('errorText').textContent = message;
+                errorMsg.classList.add('show');
+                setTimeout(() => errorMsg.classList.remove('show'), 5000);
+            }
+        }
+
+        // Funzione per caricare i dati delle richieste
+        async function loadRequestsData() {
+            try {
+                const response = await fetch('richieste.php?action=get_requests');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    requestsData = result.data;
+                    filteredRequests = [...requestsData];
+                    isDataLoaded = true;
+                    
+                    updateStats();
+                    renderRequests();
+                    console.log('Dati richieste caricati con successo:', requestsData.length, 'richieste');
+                } else {
+                    throw new Error(result.message || 'Errore sconosciuto');
+                }
+            } catch (error) {
+                console.error('Errore nel caricamento dei dati richieste:', error);
+                showMessage('error', 'Errore nel caricamento dei dati richieste: ' + error.message);
+                showError('Errore nel caricamento dei dati richieste. Verificare la connessione al server.');
+            }
+        }
+
+        // Funzione per mostrare errori nella griglia
+        function showError(message) {
+            const requestsGrid = document.getElementById('requestsGrid');
+            requestsGrid.innerHTML = `
+                <div class="error">
+                    <h3>Errore di caricamento</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        // Funzioni di utilità
+        function updateStats() {
+            if (!isDataLoaded) return;
+            
+            const total = requestsData.length;
+            const pending = requestsData.filter(r => r.status === 'pending').length;
+            const approved = requestsData.filter(r => r.status === 'approved').length;
+            const rejected = requestsData.filter(r => r.status === 'rejected').length;
+
+            document.getElementById('totalRequests').textContent = total;
+            document.getElementById('pendingRequests').textContent = pending;
+            document.getElementById('approvedRequests').textContent = approved;
+            document.getElementById('rejectedRequests').textContent = rejected;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('it-IT');
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                pending: 'In Attesa',
+                approved: 'Approvata',
+                rejected: 'Rifiutata'
+            };
+            return statusMap[status] || status;
+        }
+
+        function renderRequests() {
+            const requestsGrid = document.getElementById('requestsGrid');
+            
+            if (!isDataLoaded) {
+                return;
+            }
+            
+            if (filteredRequests.length === 0) {
+                requestsGrid.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Nessuna richiesta trovata</h3>
+                        <p>Non ci sono richieste che corrispondono ai filtri selezionati</p>
+                    </div>
+                `;
+                return;
+            }
+
+            requestsGrid.innerHTML = filteredRequests.map(request => `
+                <div class="request-card ${request.status}">
+                    <div class="request-header">
+                        <div class="request-info">
+                            <h3>${request.name}</h3>
+                            <div class="email">${request.email}</div>
+                            ${request.phone ? `<div class="phone">${request.phone}</div>` : ''}
+                        </div>
+                        <div class="request-status status-${request.status}">
+                            ${getStatusText(request.status)}
+                        </div>
+                    </div>
+                    <div class="request-details">
+                        <div class="request-detail">
+                            <strong>Auto Richiesta</strong>
+                            ${request.car}
+                        </div>
+                        <div class="request-detail">
+                            <strong>Data Richiesta</strong>
+                            ${formatDate(request.date)}
+                        </div>
+                        ${request.approved_date ? `
+                            <div class="request-detail">
+                                <strong>Data Approvazione</strong>
+                                ${formatDate(request.approved_date)}
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="request-message">
+                        <strong>Messaggio:</strong>
+                        ${request.message}
+                    </div>
+                    <div class="request-actions">
+                        ${request.status === 'pending' ? `
+                            <button class="btn btn-approve" onclick="showApprovalModal(${request.id})">
+                                Approva
+                            </button>
+                            <button class="btn btn-reject" onclick="updateRequestStatus(${request.id}, 'rejected')">
+                                Rifiuta
+                            </button>
+                        ` : ''}
+                        <button class="btn btn-delete" onclick="deleteRequest(${request.id})">
+                            Elimina
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterRequests() {
+            if (!isDataLoaded) return;
+            
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            filteredRequests = requestsData.filter(request => {
+                const matchesSearch = request.name.toLowerCase().includes(searchTerm) ||
+                                    request.email.toLowerCase().includes(searchTerm) ||
+                                    request.car.toLowerCase().includes(searchTerm) ||
+                                    request.message.toLowerCase().includes(searchTerm);
+                
+                const matchesFilter = currentFilter === 'all' || request.status === currentFilter;
+                
+                return matchesSearch && matchesFilter;
+            });
+            
+            renderRequests();
+        }
+
+        // Funzione per mostrare il modal di approvazione
+        function showApprovalModal(requestId) {
+            currentRequestForApproval = requestsData.find(r => r.id === requestId);
+            if (!currentRequestForApproval) return;
+
+            // Imposta la data minima ad oggi
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('startDate').setAttribute('min', today);
+            document.getElementById('endDate').setAttribute('min', today);
+            
+            // Pulisce il form
+            document.getElementById('approvalForm').reset();
+            
+            // Mostra il modal
+            document.getElementById('approvalModal').classList.add('active');
+        }
+
+        // Funzione per nascondere il modal
+        function hideApprovalModal() {
+            document.getElementById('approvalModal').classList.remove('active');
+            currentRequestForApproval = null;
+        }
+
+        // Funzione per confermare l'approvazione
+        async function confirmApproval() {
+            const form = document.getElementById('approvalForm');
+            const formData = new FormData(form);
+            
+            const startDate = formData.get('startDate');
+            const endDate = formData.get('endDate');
+            const price = parseFloat(formData.get('price'));
+            const notes = formData.get('notes');
+
+            // Validazione
+            if (!startDate || !endDate || !price) {
+                showMessage('error', 'Per favore compila tutti i campi obbligatori');
+                return;
+            }
+
+            if (new Date(endDate) <= new Date(startDate)) {
+                showMessage('error', 'La data di fine deve essere successiva alla data di inizio');
+                return;
+            }
+
+            if (price <= 0) {
+                showMessage('error', 'Il prezzo deve essere maggiore di zero');
+                return;
+            }
+
+            // Mostra loader
+            const confirmBtn = document.getElementById('confirmApproval');
+            const confirmText = document.getElementById('confirmButtonText');
+            const confirmLoader = document.getElementById('confirmButtonLoader');
+            
+            confirmBtn.disabled = true;
+            confirmText.style.display = 'none';
+            confirmLoader.style.display = 'inline';
+
+            try {
+                // Invia richiesta al server
+                const response = await fetch('richieste.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'approve_request',
+                        request_id: currentRequestForApproval.id,
+                        start_date: startDate,
+                        end_date: endDate,
+                        price: price,
+                        notes: notes || ''
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Aggiorna i dati locali
+                    const requestIndex = requestsData.findIndex(r => r.id === currentRequestForApproval.id);
+                    if (requestIndex !== -1) {
+                        requestsData[requestIndex].status = 'approved';
+                        requestsData[requestIndex].approved_date = new Date().toISOString().split('T')[0];
+                    }
+
+                    // Aggiorna la visualizzazione
+                    updateStats();
+                    filterRequests();
+
+                    // Nascondi il modal
+                    hideApprovalModal();
+
+                    // Mostra messaggio di successo
+                    showMessage('success', 'Richiesta approvata e aggiunta al calendario con successo!');
+
+                    console.log('Richiesta approvata con successo:', result);
+                } else {
+                    throw new Error(result.message || 'Errore sconosciuto durante l\'approvazione');
+                }
+            } catch (error) {
+                console.error('Errore durante l\'approvazione:', error);
+                showMessage('error', 'Errore durante l\'approvazione: ' + error.message);
+            } finally {
+                // Nascondi loader
+                confirmBtn.disabled = false;
+                confirmText.style.display = 'inline';
+                confirmLoader.style.display = 'none';
+            }
+        }
+
+        async function updateRequestStatus(id, newStatus) {
+            try {
+                const response = await fetch('richieste.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'update_status',
+                        request_id: id,
+                        status: newStatus
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Aggiorna i dati locali
+                    const request = requestsData.find(r => r.id === id);
+                    if (request) {
+                        request.status = newStatus;
+                        updateStats();
+                        filterRequests();
+                        
+                        const statusText = getStatusText(newStatus);
+                        showMessage('success', `Richiesta di ${request.name} ${statusText.toLowerCase()}`);
+                    }
+                } else {
+                    throw new Error(result.message || 'Errore sconosciuto');
+                }
+            } catch (error) {
+                console.error('Errore aggiornamento status:', error);
+                showMessage('error', 'Errore durante l\'aggiornamento: ' + error.message);
+            }
+        }
+
+        async function deleteRequest(id) {
+            if (!confirm('Sei sicuro di voler eliminare questa richiesta?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('richieste.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'delete_request',
+                        request_id: id
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Rimuovi dai dati locali
+                    requestsData = requestsData.filter(r => r.id !== id);
+                    updateStats();
+                    filterRequests();
+                    showMessage('success', 'Richiesta eliminata con successo');
+                } else {
+                    throw new Error(result.message || 'Errore sconosciuto');
+                }
+            } catch (error) {
+                console.error('Errore eliminazione richiesta:', error);
+                showMessage('error', 'Errore durante l\'eliminazione: ' + error.message);
+            }
+        }
+
+        function toggleMobileMenu() {
+            const navMenu = document.querySelector('.nav-menu');
+            const navToggle = document.querySelector('.nav-toggle');
+            
+            navMenu.classList.toggle('nav-menu-mobile');
+            navToggle.classList.toggle('nav-toggle-active');
+        }
+
+        // Validazione date nel modal
+        function setupDateValidation() {
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            startDateInput.addEventListener('change', function() {
+                const startDate = this.value;
+                if (startDate) {
+                    endDateInput.setAttribute('min', startDate);
+                    if (endDateInput.value && endDateInput.value <= startDate) {
+                        endDateInput.value = '';
+                    }
+                }
+            });
+        }
+
+        // Event Listeners
+        document.getElementById('searchInput').addEventListener('input', filterRequests);
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.dataset.filter;
+                filterRequests();
+            });
+        });
+
+        document.getElementById('navToggle').addEventListener('click', toggleMobileMenu);
+
+        // Event listeners per il modal
+        document.getElementById('confirmApproval').addEventListener('click', confirmApproval);
+        document.getElementById('cancelApproval').addEventListener('click', hideApprovalModal);
+
+        // Chiudi modal cliccando sull'overlay
+        document.getElementById('approvalModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideApprovalModal();
+            }
+        });
+
+        // Chiudi modal con ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('approvalModal').classList.contains('active')) {
+                hideApprovalModal();
+            }
+        });
+
+        // Inizializzazione
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRequestsData();
+            setupDateValidation();
+        });
+
+        
+    </script>
+
+    <style>
+        .error-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff4757;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .error-message.show {
+            transform: translateX(0);
+        }
+
+        .success-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #2ed573;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .success-message.show {
+            transform: translateX(0);
+        }
+
+        .button-loader {
+            font-size: 14px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</body>
+</html>

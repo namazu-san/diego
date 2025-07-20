@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Flotta Veicoli</title>
+     <link rel="stylesheet" href="flotta.css" />
+</head>
+<body>
+    <!-- Header di navigazione -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1>Sistema Flotta</h1>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="flotta.html" class="nav-link active">
+                        <span class="nav-icon">🚗</span>
+                        Gestione Flotta
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="richieste.html" class="nav-link">
+                        <span class="nav-icon">📋</span>
+                        Richieste
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="calendario.html" class="nav-link">
+                        <span class="nav-icon">📅</span>
+                        Calendario
+                    </a>
+                </li>
+            </ul>
+            <div class="nav-toggle" id="navToggle">
+                <span class="nav-toggle-bar"></span>
+                <span class="nav-toggle-bar"></span>
+                <span class="nav-toggle-bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h1>Gestione Flotta Veicoli</h1>
+            <p>Sistema avanzato per la gestione del parco auto aziendale</p>
+        </div>
+
+        <div id="messageContainer"></div>
+
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Cerca veicoli per marca, modello o caratteristiche...">
+            </div>
+            <button class="btn btn-primary" id="addCarBtn">
+                + Aggiungi Veicolo
+            </button>
+        </div>
+
+        <div id="carsGrid" class="cars-grid">
+            <div class="loading">Caricamento veicoli...</div>
+        </div>
+    </div>
+
+    <!-- Modal per aggiungere/modificare veicolo -->
+    <div id="carModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Aggiungi Veicolo</h2>
+                <span class="close" id="closeModal">&times;</span>
+            </div>
+            <form id="carForm">
+                <div class="form-group">
+                    <label for="brand">Marca (codice)</label>
+                    <input type="text" id="brand" name="brand" required>
+                </div>                
+                <div class="form-group">
+                    <label for="title">Titolo</label>
+                    <input type="text" id="title" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="price">Prezzo</label>
+                    <input type="text" id="price" name="price" required>
+                </div>
+                <div class="form-group">
+                    <label for="imageFile">Immagine</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="imageFile" accept="image/*">
+                        <div class="file-input-display">
+                            <span id="fileDisplay">Clicca per selezionare un'immagine</span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="image" name="image">
+                </div>
+                <div class="form-group">
+                    <label for="engine">Motore</label>
+                    <input type="text" id="engine" name="engine" required>
+                </div>
+                <div class="form-group">
+                    <label for="power">Potenza</label>
+                    <input type="text" id="power" name="power" required>
+                </div>
+                <div class="form-group">
+                    <label for="fuel">Carburante</label>
+                    <input type="text" id="fuel" name="fuel" required>
+                </div>
+                <div class="form-group">
+                    <label for="seats">Posti</label>
+                    <input type="text" id="seats" name="seats" required>
+                </div>
+                <div class="form-group">
+                    <label for="transmission">Trasmissione</label>
+                    <input type="text" id="transmission" name="transmission" required>
+                </div>
+                <div class="form-group">
+                    <label for="year">Anno</label>
+                    <input type="text" id="year" name="year" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">Descrizione</label>
+                    <textarea id="description" name="description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Caratteristiche</label>
+                    <div class="features-input">
+                        <input type="text" id="featureInput" placeholder="Aggiungi caratteristica">
+                        <button type="button" class="btn btn-secondary btn-small" id="addFeatureBtn">Aggiungi</button>
+                    </div>
+                    <div id="featuresList" class="features-list"></div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelBtn">Annulla</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Salva</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Configurazione API
+        const API_BASE_URL = 'flotta.php';
+        
+        // Variabili globali
+        let carsData = [];
+        let filteredCars = [];
+        let currentEditingId = null;
+        let currentFeatures = [];
+
+        // Funzioni API
+        async function apiRequest(endpoint, method = 'GET', data = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            };
+
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Errore nella richiesta');
+            }
+
+            return response.json();
+        }
+
+        async function uploadImage(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const response = await fetch(`${API_BASE_URL}/upload`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Errore nel caricamento dell\'immagine');
+            }
+
+            return response.json();
+        }
+
+        // Carica i dati dei veicoli
+        async function loadCarsData() {
+            try {
+                const response = await apiRequest('/cars');
+                carsData = response.cars || [];
+                filteredCars = [...carsData];
+                renderCars();
+            } catch (error) {
+                console.error('Errore nel caricamento dei dati:', error);
+                showMessage('Errore nel caricamento dei dati: ' + error.message, 'error');
+                carsData = [];
+                filteredCars = [];
+                renderCars();
+            }
+        }
+
+        // Rendering delle auto
+        function renderCars() {
+            const carsGrid = document.getElementById('carsGrid');
+            
+            if (filteredCars.length === 0) {
+                carsGrid.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Nessun veicolo trovato</h3>
+                        <p>Inizia aggiungendo il primo veicolo alla flotta</p>
+                    </div>
+                `;
+                return;
+            }
+
+            carsGrid.innerHTML = filteredCars.map(car => `
+                <div class="car-card">
+                    ${car.image ? `<img src="${car.image}" alt="${car.title}" class="car-image">` : ''}
+                    <div class="car-header">
+                        <div>
+                            <div class="car-title">${car.title}</div>
+                        </div>
+                        <div class="car-price">${car.price}</div>
+                    </div>
+                    <div class="car-details">
+                        <div class="car-detail"><strong>Motore:</strong> ${car.engine}</div>
+                        <div class="car-detail"><strong>Potenza:</strong> ${car.power}</div>
+                        <div class="car-detail"><strong>Carburante:</strong> ${car.fuel}</div>
+                        <div class="car-detail"><strong>Posti:</strong> ${car.seats}</div>
+                        <div class="car-detail"><strong>Trasmissione:</strong> ${car.transmission}</div>
+                        <div class="car-detail"><strong>Anno:</strong> ${car.year}</div>
+                    </div>
+                    <div class="car-features">
+                        ${car.features.map(feature => `<span class="feature-tag">${feature}</span>`).join('')}
+                    </div>
+                    <div class="car-description">${car.description}</div>
+                    <div class="car-actions">
+                        <button class="btn btn-secondary btn-small" onclick="editCar(${car.id})">Modifica</button>
+                        <button class="btn btn-danger btn-small" onclick="deleteCar(${car.id})">Elimina</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Funzione di ricerca
+        function searchCars() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            filteredCars = carsData.filter(car => 
+                car.title.toLowerCase().includes(searchTerm) ||
+                car.brandName.toLowerCase().includes(searchTerm) ||
+                car.brand.toLowerCase().includes(searchTerm) ||
+                car.features.some(feature => feature.toLowerCase().includes(searchTerm)) ||
+                car.description.toLowerCase().includes(searchTerm)
+            );
+            renderCars();
+        }
+
+        // Gestione messaggi
+        function showMessage(message, type = 'success') {
+            const messageContainer = document.getElementById('messageContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            messageContainer.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        // Gestione modal
+        function openModal(title = 'Aggiungi Veicolo') {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('carModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('carModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            resetForm();
+        }
+
+        function resetForm() {
+            document.getElementById('carForm').reset();
+            document.getElementById('featuresList').innerHTML = '';
+            document.getElementById('fileDisplay').textContent = 'Clicca per selezionare un\'immagine';
+            document.getElementById('image').value = '';
+            currentEditingId = null;
+            currentFeatures = [];
+        }
+
+        // Gestione upload immagine
+        document.getElementById('imageFile').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const fileDisplay = document.getElementById('fileDisplay');
+            fileDisplay.textContent = 'Caricamento...';
+
+            try {
+                const result = await uploadImage(file);
+                document.getElementById('image').value = result.url;
+                fileDisplay.textContent = `Immagine caricata: ${result.filename}`;
+                showMessage('Immagine caricata con successo!');
+            } catch (error) {
+                console.error('Errore nell\'upload:', error);
+                showMessage('Errore nel caricamento dell\'immagine: ' + error.message, 'error');
+                fileDisplay.textContent = 'Errore nel caricamento';
+            }
+        });
+
+        // Gestione caratteristiche
+        function addFeature() {
+            const featureInput = document.getElementById('featureInput');
+            const feature = featureInput.value.trim();
+            
+            if (feature && !currentFeatures.includes(feature)) {
+                currentFeatures.push(feature);
+                renderFeatures();
+                featureInput.value = '';
+            }
+        }
+
+        function removeFeature(index) {
+            currentFeatures.splice(index, 1);
+            renderFeatures();
+        }
+
+        function renderFeatures() {
+            const featuresList = document.getElementById('featuresList');
+            featuresList.innerHTML = currentFeatures.map((feature, index) => `
+                <span class="feature-item">
+                    ${feature}
+                    <span class="feature-remove" onclick="removeFeature(${index})">&times;</span>
+                </span>
+            `).join('');
+        }
+
+        // CRUD Operations
+        function addCar() {
+            currentEditingId = null;
+            currentFeatures = [];
+            openModal('Aggiungi Veicolo');
+        }
+
+        function editCar(id) {
+            const car = carsData.find(c => c.id === id);
+            if (!car) return;
+
+            currentEditingId = id;
+            currentFeatures = [...car.features];
+
+            // Popola il form
+            document.getElementById('brand').value = car.brand;
+            document.getElementById('title').value = car.title;
+            document.getElementById('price').value = car.price;
+            document.getElementById('image').value = car.image;
+            document.getElementById('engine').value = car.engine;
+            document.getElementById('power').value = car.power;
+            document.getElementById('fuel').value = car.fuel;
+            document.getElementById('seats').value = car.seats;
+            document.getElementById('transmission').value = car.transmission;
+            document.getElementById('year').value = car.year;
+            document.getElementById('description').value = car.description;
+
+            // Mostra nome immagine corrente
+            if (car.image) {
+                document.getElementById('fileDisplay').textContent = `Immagine corrente: ${car.image}`;
+            }
+
+            renderFeatures();
+            openModal('Modifica Veicolo');
+        }
+
+        async function deleteCar(id) {
+            if (!confirm('Sei sicuro di voler eliminare questo veicolo?')) {
+                return;
+            }
+
+            try {
+                await apiRequest(`/cars/${id}`, 'DELETE');
+                showMessage('Veicolo eliminato con successo!');
+                await loadCarsData();
+            } catch (error) {
+                console.error('Errore nell\'eliminazione:', error);
+                showMessage('Errore nell\'eliminazione del veicolo: ' + error.message, 'error');
+            }
+        }
+
+        async function saveCar(event) {
+            event.preventDefault();
+            
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Salvando...';
+
+            try {
+                const formData = new FormData(document.getElementById('carForm'));
+                const carData = {
+                    brand: formData.get('brand'),
+                    title: formData.get('title'),
+                    price: formData.get('price'),
+                    image: formData.get('image'),
+                    engine: formData.get('engine'),
+                    power: formData.get('power'),
+                    fuel: formData.get('fuel'),
+                    seats: formData.get('seats'),
+                    transmission: formData.get('transmission'),
+                    year: formData.get('year'),
+                    description: formData.get('description'),
+                    features: [...currentFeatures]
+                };
+
+                if (currentEditingId) {
+                    // Modifica veicolo esistente
+                    await apiRequest(`/cars/${currentEditingId}`, 'PUT', carData);
+                    showMessage('Veicolo modificato con successo!');
+                } else {
+                    // Aggiungi nuovo veicolo
+                    await apiRequest('/cars', 'POST', carData);
+                    showMessage('Veicolo aggiunto con successo!');
+                }
+
+                closeModal();
+                await loadCarsData();
+            } catch (error) {
+                console.error('Errore nel salvataggio:', error);
+                showMessage('Errore nel salvataggio del veicolo: ' + error.message, 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Salva';
+            }
+        }
+
+        // Gestione menu mobile
+        function toggleMobileMenu() {
+            const navMenu = document.querySelector('.nav-menu');
+            const navToggle = document.querySelector('.nav-toggle');
+            
+            navMenu.classList.toggle('nav-menu-mobile');
+            navToggle.classList.toggle('nav-toggle-active');
+        }
+
+        // Event Listeners
+        document.getElementById('searchInput').addEventListener('input', searchCars);
+        document.getElementById('addCarBtn').addEventListener('click', addCar);
+        document.getElementById('closeModal').addEventListener('click', closeModal);
+        document.getElementById('cancelBtn').addEventListener('click', closeModal);
+        document.getElementById('carForm').addEventListener('submit', saveCar);
+        document.getElementById('addFeatureBtn').addEventListener('click', addFeature);
+        document.getElementById('featureInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addFeature();
+            }
+        });
+        document.getElementById('navToggle').addEventListener('click', toggleMobileMenu);
+
+        // Chiudi modal cliccando fuori
+        document.getElementById('carModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Inizializzazione
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCarsData();
+        });
+    </script>
+</body>
+</html>

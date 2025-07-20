@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baldassare Motors International SRLS - Autonoleggio e vendita auto di Lusso</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <img src="./priv/images/logo.png" alt="Baldassare Motor International Logo" onerror="this.style.display='none'">
+                </div>
+                <nav class="nav-links">
+                    <a href="#home">Home</a>
+                    <a href="#fleet">Flotta</a>
+                    <a href="#contact">Contatti</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Luxury Car Rental</h1>
+                <p>Esperienza di guida premium con la flotta più esclusiva d'Italia</p>
+                <button class="cta-button" onclick="document.getElementById('fleet').scrollIntoView()">
+                    Scopri la Flotta
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Filter Section -->
+    <section class="filter-section" id="fleet">
+        <div class="container">
+            <h2 class="filter-title">La Nostra Flotta</h2>
+            <div class="filter-buttons" id="filter-buttons">
+                <div class="loading">Caricamento flotta in corso...</div>
+            </div>
+
+            <div class="cars-grid" id="cars-grid">
+                <!-- Cars will be populated by JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact-section" id="contact">
+        <div class="container">
+            <h2 class="contact-title">Contattaci</h2>
+            <div class="contact-grid">
+                <div class="contact-card">
+                    <div class="contact-icon">📞</div>
+                    <div class="contact-info">
+                        <h3>Telefono</h3>
+                        <p>+39 1234567899</p>
+                        <p>Disponibili 24/7</p>
+                    </div>
+                </div>
+                <div class="contact-card">
+                    <div class="contact-icon">📧</div>
+                    <div class="contact-info">
+                        <h3>Email</h3>
+                        <p>info@baldassaremotor.it</p>
+                        <p>Risposta entro 2 ore</p>
+                    </div>
+                </div>
+                <div class="contact-card">
+                    <div class="contact-icon">📍</div>
+                    <div class="contact-info">
+                        <h3>Sede</h3>
+                        <p>Via Roma, 123</p>
+                        <p>70123 Bari, Italia</p>
+                    </div>
+                </div>
+            </div>
+
+            <form class="contact-form">
+                <div class="form-group">
+                    <label for="name">Nome e Cognome</label>
+                    <input type="text" id="name" name="name" placeholder="Il tuo nome completo" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="la.tua@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Telefono</label>
+                    <input type="tel" id="phone" name="phone" placeholder="+39 123 456 7890">
+                </div>
+                <div class="form-group">
+                    <label for="car">Auto di interesse</label>
+                    <input type="text" id="car" name="car" placeholder="Specifica il modello che ti interessa">
+                </div>
+                <div class="form-group">
+                    <label for="message">Messaggio</label>
+                    <textarea id="message" name="message" rows="4" placeholder="Descrivi le tue esigenze di noleggio..."></textarea>
+                </div>
+                <button type="submit" class="submit-btn">Invia Richiesta</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Baldassare Motor International SRLS. Created&designed by Roman Modugno.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Global variables
+        let cars = [];
+        let currentFilter = 'all';
+
+        // DOM elements
+        const carsGrid = document.getElementById('cars-grid');
+        const filterButtonsContainer = document.getElementById('filter-buttons');
+
+        // Load fleet data from JSON file
+        async function loadFleetData() {
+            try {
+                const response = await fetch('./priv/flotta.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                cars = data.cars;
+                
+                
+                
+                return cars;
+            } catch (error) {
+                console.error('Errore nel caricamento del file flotta.json:', error);
+                
+                // Fallback data in case JSON file is not available
+                
+                
+                return cars;
+            }
+        }
+
+        // Initialize application
+        async function init() {
+            try {
+                await loadFleetData();
+                createFilterButtons();
+                renderCars(cars);
+                setupEventListeners();
+            } catch (error) {
+                console.error('Errore nell\'inizializzazione:', error);
+                filterButtonsContainer.innerHTML = '<p class="loading">Errore nel caricamento dei dati. Riprova più tardi.</p>';
+            }
+        }
+
+        // Create filter buttons dynamically based on available brands
+        function createFilterButtons() {
+            // Clear loading message
+            filterButtonsContainer.innerHTML = '';
+            
+            // Get unique brands from cars data
+            const brands = [...new Set(cars.map(car => car.brand))];
+            
+            // Create "Tutte" button
+            const allButton = document.createElement('button');
+            allButton.className = 'filter-btn active';
+            allButton.setAttribute('data-brand', 'all');
+            allButton.textContent = 'TUTTE';
+            filterButtonsContainer.appendChild(allButton);
+
+            // Create brand buttons
+            brands.forEach(brand => {
+                const button = document.createElement('button');
+                button.className = 'filter-btn';
+                button.setAttribute('data-brand', brand);
+                
+                // Get brand name from first car of this brand
+                const brandName = cars.find(car => car.brand === brand)?.brandName || brand;
+                button.textContent = brandName;
+                
+                filterButtonsContainer.appendChild(button);
+            });
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Filter buttons
+            filterButtonsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('filter-btn')) {
+                    handleFilterClick(e.target);
+                }
+            });
+
+            // Form submission
+            document.querySelector('.contact-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                alert('Grazie per la tua richiesta! Ti contatteremo entro 2 ore.');
+                e.target.reset();
+            });
+
+            // Smooth scrolling for navigation
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href').substring(1);
+                    const targetElement = document.getElementById(targetId);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        }
+
+        // Handle filter button clicks
+        function handleFilterClick(button) {
+            // Remove active class from all buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            // Add active class to clicked button
+            button.classList.add('active');
+            
+            // Get brand and filter cars
+            const brand = button.getAttribute('data-brand');
+            currentFilter = brand;
+            const filteredCars = brand === 'all' ? cars : cars.filter(car => car.brand === brand);
+            renderCars(filteredCars);
+        }
+
+        // Render cars with all details in cards
+        function renderCars(carsToRender) {
+            if (carsToRender.length === 0) {
+                carsGrid.innerHTML = '<p class="loading">Nessuna auto disponibile per questo filtro.</p>';
+                return;
+            }
+
+            carsGrid.innerHTML = '';
+            carsToRender.forEach(car => {
+                const carCard = document.createElement('div');
+                carCard.className = 'car-card';
+                carCard.innerHTML = `
+                    <div class="car-image" style="background-image: url('./priv/${car.image}')">
+                        <div style="display: ${car.image ? 'none' : 'block'}">Immagine non disponibile</div>
+                    </div>
+                    <div class="car-info">
+                        <h3 class="car-title">${car.title}</h3>
+                        <div class="car-price">${car.price}</div>
+                        <div class="car-description">${car.description}</div>
+                        
+                        <div class="car-specs">
+                            <div class="spec-item">
+                                <div class="spec-label">Motore</div>
+                                <div class="spec-value">${car.engine}</div>
+                            </div>
+                            <div class="spec-item">
+                                <div class="spec-label">Potenza</div>
+                                <div class="spec-value">${car.power}</div>
+                            </div>
+                            <div class="spec-item">
+                                <div class="spec-label">Carburante</div>
+                                <div class="spec-value">${car.fuel}</div>
+                            </div>
+                            <div class="spec-item">
+                                <div class="spec-label">Posti</div>
+                                <div class="spec-value">${car.seats}</div>
+                            </div>
+                            <div class="spec-item">
+                                <div class="spec-label">Cambio</div>
+                                <div class="spec-value">${car.transmission}</div>
+                            </div>
+                            <div class="spec-item">
+                                <div class="spec-label">Anno</div>
+                                <div class="spec-value">${car.year}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="car-features">
+                            ${car.features.map(feature => `<span class="feature">${feature}</span>`).join('')}
+                        </div>
+                        
+                        <button class="contact-btn" onclick="scrollToContact('${car.title}')">
+                            Richiedi Informazioni
+                        </button>
+                    </div>
+                `;
+                carsGrid.appendChild(carCard);
+            });
+        }
+
+        // Scroll to contact section and pre-fill car info
+        function scrollToContact(carTitle) {
+            // Scroll to contact section
+            document.getElementById('contact').scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+            
+            // Pre-fill the car field in the contact form
+            setTimeout(() => {
+                const carField = document.getElementById('car');
+                if (carField) {
+                    carField.value = carTitle;
+                    carField.focus();
+                }
+            }, 1000);
+        }
+
+        // Start the application when page loads
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
